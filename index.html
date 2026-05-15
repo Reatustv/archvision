@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchVision - AI Construction Cost Estimator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a472a;
+            --primary-light: #2d6a3e;
+            --accent: #f39c12;
+            --accent-dark: #d68910;
+            --bg-dark: #0f1419;
+            --bg-light: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --success: #27ae60;
+            --warning: #e74c3c;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav ul {
+            display: flex;
+            gap: 40px;
+            list-style: none;
+            align-items: center;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        /* Main content */
+        main {
+            margin-top: 70px;
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Hero section */
+        .hero {
+            text-align: center;
+            margin-bottom: 80px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+
+        .hero h1 span {
+            color: var(--accent);
+            position: relative;
+            display: inline-block;
+        }
+
+        .hero h1 span::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+            transform: scaleX(0);
+            animation: underline 0.8s ease-out 0.3s forwards;
+        }
+
+        @keyframes underline {
+            to {
+                transform: scaleX(1);
+            }
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+        }
+
+        /* Estimator container */
+        .estimator {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            padding: 50px;
+            margin-bottom: 60px;
+            border: 1px solid var(--border);
+        }
+
+        .estimator-header {
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .estimator-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .estimator-header p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* Form grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+            background: #fafbfc;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+            grid-column: 1 / -1;
+        }
+
+        /* Mode selector */
+        .mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            grid-column: 1 / -1;
+        }
+
+        .mode-option {
+            padding: 20px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            background: #fafbfc;
+        }
+
+        .mode-option:hover {
+            border-color: var(--accent);
+            background: #fff8f0;
+        }
+
+        .mode-option input {
+            display: none;
+        }
+
+        .mode-option input:checked + label {
+            color: var(--accent);
+        }
+
+        .mode-option input:checked ~ .mode-option {
+            border-color: var(--accent);
+            background: #fff8f0;
+        }
+
+        .mode-option label {
+            display: block;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .mode-option .subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        /* Submit button */
+        .submit-btn {
+            width: 100%;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 16px rgba(26, 71, 42, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(26, 71, 42, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn.loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Results section */
+        .results {
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .cost-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .cost-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            transition: transform 0.3s;
+        }
+
+        .cost-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .cost-card h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .cost-card .amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .cost-card.highlight {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border-left-color: white;
+            color: white;
+        }
+
+        .cost-card.highlight h3,
+        .cost-card.highlight .amount {
+            color: white;
+        }
+
+        /* Breakdown table */
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        .breakdown-table th {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .breakdown-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .breakdown-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .breakdown-table .label {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Loading state */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Error message */
+        .error-message {
+            background: #fee;
+            color: var(--warning);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--warning);
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        /* Success message */
+        .success-message {
+            background: #efe;
+            color: var(--success);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--success);
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--primary);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-top: 80px;
+        }
+
+        footer p {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .estimator {
+                padding: 30px;
+            }
+
+            .cost-summary {
+                grid-template-columns: 1fr;
+            }
+
+            nav ul {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="logo">Arch<span>Vision</span></a>
+            <ul>
+                <li><a href="#estimator">Estimator</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <h1>AI-Powered <span>Construction Cost</span> Estimation</h1>
+            <p>Get accurate, location-specific cost estimates for your architecture projects in East Africa. Powered by Claude AI and real supplier data from Tanzania, Kenya, and beyond.</p>
+        </section>
+
+        <!-- Estimator -->
+        <section id="estimator" class="estimator">
+            <div class="estimator-header">
+                <h2>Create Your Estimate</h2>
+                <p>Describe your project. Our AI analyzes structural requirements and calculates costs based on your location and supplier rates.</p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <form id="estimateForm">
+                <!-- Project Description -->
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="projectDesc">Project Description</label>
+                        <textarea 
+                            id="projectDesc" 
+                            placeholder="e.g., Three-room villa with open plan living area, verandah, and single story. Modern finishes. Located in Dar es Salaam."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <!-- Location -->
+                    <div class="form-group">
+                        <label for="location">Project Location</label>
+                        <select id="location" required>
+                            <option value="">Select location...</option>
+                            <option value="dar_es_salaam">Dar es Salaam</option>
+                            <option value="moshi_arusha">Moshi / Arusha</option>
+                            <option value="zanzibar">Zanzibar</option>
+                        </select>
+                    </div>
+
+                    <!-- Mode -->
+                    <div class="form-group">
+                        <label for="mode">Estimation Mode</label>
+                        <select id="mode" required>
+                            <option value="beginner">Beginner (AI estimates all)</option>
+                            <option value="expert">Expert (I'll input costs)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Expert inputs (hidden by default) -->
+                <div id="expertInputs" style="display: none; grid-column: 1 / -1; margin-bottom: 20px; padding: 20px; background: #f9fafb; border-radius: 8px;">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);">Your Cost Assumptions (Optional)</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="foundationCost">Foundation Cost (TZS)</label>
+                            <input type="number" id="foundationCost" placeholder="e.g., 5000000">
+                        </div>
+                        <div class="form-group">
+                            <label for="structureCost">Structure Cost (TZS)</label>
+                            <input type="number" id="structureCost" placeholder="e.g., 8000000">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="submit-btn">Generate Estimate</button>
+            </form>
+
+            <!-- Results -->
+            <div id="results" class="results">
+                <div style="margin-bottom: 40px;">
+                    <h2 style="color: var(--primary); margin-bottom: 20px;">Estimate Results</h2>
+                </div>
+
+                <div class="cost-summary">
+                    <div class="cost-card">
+                        <h3>Substructure</h3>
+                        <div class="amount" id="substructureCost">TZS 0</div>
+                    </div>
+                    <div class="cost-card">
+                        <h3>Superstructure</h3>
+                        <div class="amount" id="superstructureCost">TZS 0</div>
+                    </div>
+                    <div class="cost-card">
+                        <h3>Finishes</h3>
+                        <div class="amount" id="finishesCost">TZS 0</div>
+                    </div>
+                    <div class="cost-card highlight">
+                        <h3>Total Project Cost</h3>
+                        <div class="amount" id="totalCost">TZS 0</div>
+                    </div>
+                </div>
+
+                <table class="breakdown-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Details</th>
+                            <th>Estimated Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdownTableBody">
+                    </tbody>
+                </table>
+
+                <div class="action-buttons">
+                    <a href="#" class="btn btn-primary" id="downloadPdfBtn">
+                        <span>📄</span> Download PDF
+                    </a>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('estimateForm').reset(); document.getElementById('results').classList.remove('active');">
+                        <span>↻</span> New Estimate
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 ArchVision. AI-powered construction cost estimation for African architects.</p>
+        <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">Contact Us</a></p>
+    </footer>
+
+    <script>
+        const API_BASE = 'http://localhost:5000'; // Change to your backend URL
+
+        const form = document.getElementById('estimateForm');
+        const modeSelect = document.getElementById('mode');
+        const expertInputs = document.getElementById('expertInputs');
+        const resultsDiv = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // Toggle expert inputs
+        modeSelect.addEventListener('change', (e) => {
+            expertInputs.style.display = e.target.value === 'expert' ? 'block' : 'none';
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Clear messages
+            errorMessage.classList.remove('show');
+            successMessage.classList.remove('show');
+
+            const projectDesc = document.getElementById('projectDesc').value;
+            const location = document.getElementById('location').value;
+            const mode = modeSelect.value;
+
+            const userInputs = mode === 'expert' ? {
+                foundationCost: parseFloat(document.getElementById('foundationCost').value) || null,
+                structureCost: parseFloat(document.getElementById('structureCost').value) || null,
+            } : {};
+
+            // Disable button
+            const submitBtn = document.querySelector('.submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+            submitBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/estimate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectDescription: projectDesc,
+                        location: location,
+                        mode: mode,
+                        userInputs: userInputs,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate estimate');
+                }
+
+                const data = await response.json();
+
+                // Display results
+                displayResults(data.estimate);
+                resultsDiv.classList.add('active');
+
+                // Set PDF download link
+                document.getElementById('downloadPdfBtn').href = `${API_BASE}${data.pdfUrl}`;
+
+                successMessage.textContent = '✓ Estimate generated successfully!';
+                successMessage.classList.add('show');
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.classList.add('show');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+                submitBtn.textContent = originalText;
+            }
+        });
+
+        function displayResults(estimate) {
+            const { costs, breakdown } = estimate;
+
+            // Update cost cards
+            document.getElementById('substructureCost').textContent = `TZS ${costs.substructure.toLocaleString('en-US')}`;
+            document.getElementById('superstructureCost').textContent = `TZS ${costs.superstructure.toLocaleString('en-US')}`;
+            document.getElementById('finishesCost').textContent = `TZS ${costs.finishes.toLocaleString('en-US')}`;
+            document.getElementById('totalCost').textContent = `TZS ${costs.total.toLocaleString('en-US')}`;
+
+            // Update breakdown table
+            const tableBody = document.getElementById('breakdownTableBody');
+            tableBody.innerHTML = '';
+
+            const components = [
+                { name: 'Foundation', key: 'foundation' },
+                { name: 'Columns', key: 'columns' },
+                { name: 'Beams', key: 'beams' },
+                { name: 'Floor Slab', key: 'floor_slab' },
+                { name: 'Walls', key: 'walls' },
+                { name: 'Roof', key: 'roof' },
+                { name: 'Finishes', key: 'finishes' },
+            ];
+
+            components.forEach((comp) => {
+                const data = breakdown[comp.key];
+                if (data && data.description) {
+                    const row = document.createElement('tr');
+                    const cost = data.estimated_cost 
+                        ? Object.values(data.estimated_cost).reduce((a, b) => typeof b === 'number' ? a + b : a, 0)
+                        : 0;
+                    
+                    row.innerHTML = `
+                        <td class="label">${comp.name}</td>
+                        <td>${data.description}</td>
+                        <td style="text-align: right; font-weight: 600;">TZS ${cost.toLocaleString('en-US')}</td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
