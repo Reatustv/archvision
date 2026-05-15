@@ -1,0 +1,12 @@
+{
+  "name": "archvision",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.20.0",
+    "pdfkit": "0.13.0"
+  }
+}
