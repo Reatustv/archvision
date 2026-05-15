@@ -11,8 +11,8 @@ const anthropic = new Anthropic();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static('.')); // Serve static files from root
 
-// Supplier rates by location
 const SUPPLIER_RATES = {
   dar_es_salaam: {
     cement_per_bag: 18000,
@@ -34,10 +34,7 @@ const SUPPLIER_RATES = {
   },
 };
 
-// Claude prompt for analysis
-const SYSTEM_PROMPT = `You are a construction cost estimator. Analyze the project and return ONLY valid JSON (no other text).
-
-Return exactly this structure:
+const SYSTEM_PROMPT = `You are a construction cost estimator. Return ONLY valid JSON:
 {
   "project_name": "string",
   "estimated_area_sqm": 150,
@@ -45,24 +42,16 @@ Return exactly this structure:
   "structure_cost_factor": 0.50,
   "finishes_cost_factor": 0.25,
   "description": "string"
-}
+}`;
 
-For a "three room villa":
-- Area: ~150 sqm
-- Foundation: 25% of total
-- Structure: 50% of total
-- Finishes: 25% of total`;
-
-// API endpoint
 app.post('/api/estimate', async (req, res) => {
   try {
-    const { projectDescription, location, mode, userInputs } = req.body;
+    const { projectDescription, location } = req.body;
 
     if (!projectDescription || !location) {
       return res.status(400).json({ error: 'Missing project description or location' });
     }
 
-    // Call Claude
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-6',
       max_tokens: 500,
@@ -70,12 +59,11 @@ app.post('/api/estimate', async (req, res) => {
       messages: [
         {
           role: 'user',
-          content: `Analyze this project: "${projectDescription}"`,
+          content: `Analyze: "${projectDescription}"`,
         },
       ],
     });
 
-    // Extract JSON from Claude response
     const responseText = message.content[0].text;
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     
@@ -84,15 +72,9 @@ app.post('/api/estimate', async (req, res) => {
     }
 
     const analysis = JSON.parse(jsonMatch[0]);
-    const rates = SUPPLIER_RATES[location] || SUPPLIER_RATES.dar_es_salaam;
-
-    // Calculate base cost (cement is ~1000 TZS per sqm)
     const baseCost = analysis.estimated_area_sqm * 1000;
-
-    // Apply location multiplier
     const locationMultiplier = location === 'zanzibar' ? 1.25 : location === 'moshi_arusha' ? 1.1 : 1.0;
 
-    // Calculate costs
     const substructureCost = baseCost * analysis.foundation_cost_factor * locationMultiplier;
     const superstructureCost = baseCost * analysis.structure_cost_factor * locationMultiplier;
     const finishesCost = baseCost * analysis.finishes_cost_factor * locationMultiplier;
@@ -100,7 +82,6 @@ app.post('/api/estimate', async (req, res) => {
     const contingency = subtotal * 0.1;
     const total = subtotal + contingency;
 
-    // Generate PDF
     const pdfDir = path.join(__dirname, 'pdfs');
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -114,12 +95,10 @@ app.post('/api/estimate', async (req, res) => {
 
     doc.pipe(stream);
 
-    // Header
     doc.fontSize(24).font('Helvetica-Bold').text('ArchVision', 50, 40);
     doc.fontSize(12).font('Helvetica').text('Construction Cost Estimator', 50, 70);
     doc.moveTo(50, 90).lineTo(550, 90).stroke();
 
-    // Project info
     doc.fontSize(14).font('Helvetica-Bold').text('Project Estimate', 50, 110);
     doc.fontSize(11).font('Helvetica');
     doc.text(`Project: ${analysis.project_name}`, 50, 135);
@@ -127,41 +106,30 @@ app.post('/api/estimate', async (req, res) => {
     doc.text(`Location: ${location.replace('_', ' ').toUpperCase()}`, 50, 175);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 50, 195);
 
-    // Cost breakdown
     doc.fontSize(12).font('Helvetica-Bold').text('Cost Breakdown', 50, 230);
     doc.fontSize(10).font('Helvetica');
 
-    const costData = [
-      ['Substructure (Foundation)', `TZS ${Math.round(substructureCost).toLocaleString()}`],
-      ['Superstructure (Walls, Roof)', `TZS ${Math.round(superstructureCost).toLocaleString()}`],
-      ['Finishes (Paint, Tiles, etc)', `TZS ${Math.round(finishesCost).toLocaleString()}`],
+    let y = 250;
+    const costs = [
+      ['Substructure', `TZS ${Math.round(substructureCost).toLocaleString()}`],
+      ['Superstructure', `TZS ${Math.round(superstructureCost).toLocaleString()}`],
+      ['Finishes', `TZS ${Math.round(finishesCost).toLocaleString()}`],
       ['Subtotal', `TZS ${Math.round(subtotal).toLocaleString()}`],
       ['Contingency (10%)', `TZS ${Math.round(contingency).toLocaleString()}`],
     ];
 
-    let y = 250;
-    costData.forEach((row) => {
+    costs.forEach((row) => {
       doc.text(row[0], 50, y, { width: 350 });
       doc.text(row[1], 400, y, { align: 'right' });
       y += 20;
     });
 
-    // Total
     doc.moveTo(50, y).lineTo(550, y).stroke();
-    doc.fontSize(12).font('Helvetica-Bold').text('TOTAL PROJECT COST', 50, y + 10);
+    doc.fontSize(12).font('Helvetica-Bold').text('TOTAL', 50, y + 10);
     doc.fontSize(16).text(`TZS ${Math.round(total).toLocaleString()}`, 400, y + 10, { align: 'right' });
-
-    // Footer
-    doc.fontSize(8).font('Helvetica').text(
-      'This estimate is based on standard construction costs in Tanzania. Actual costs may vary based on market conditions and specific requirements.',
-      50,
-      doc.page.height - 50,
-      { width: 500 }
-    );
 
     doc.end();
 
-    // Wait for PDF to be written
     stream.on('finish', () => {
       res.json({
         success: true,
@@ -182,27 +150,19 @@ app.post('/api/estimate', async (req, res) => {
       });
     });
 
-    stream.on('error', (err) => {
-      console.error('PDF write error:', err);
-      res.status(500).json({ error: 'Failed to generate PDF' });
-    });
-
   } catch (error) {
-    console.error('API error:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Serve PDFs
 app.use('/pdfs', express.static('pdfs'));
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✓ ArchVision server running on port ${PORT}`);
+  console.log(`✓ Running on port ${PORT}`);
 });
