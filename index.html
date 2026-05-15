@@ -731,7 +731,7 @@
             submitBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
 
             try {
-                const response = await fetch(`${API_BASE}/api/estimate`, {
+                const response = await fetch(`/api/estimate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
